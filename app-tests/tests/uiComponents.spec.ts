@@ -7,10 +7,11 @@ test.beforeEach(async({page}) => {
 test.describe('Form Layouts page', () => {
     test.beforeEach(async({page}) => {
         await page.getByText('Forms').click()
-        await page.getByText('Form Layouts').click()
     })
 
     test('input fields', async({page}) => {
+        await page.getByText('Form Layouts').click()
+
         const usingTheGridEmailInput = page.locator('nb-card', {hasText: "Using the Grid"}).getByRole('textbox', {name: 'Email'})
 
         await usingTheGridEmailInput.fill('test.test@test.com.br')
@@ -26,6 +27,8 @@ test.describe('Form Layouts page', () => {
     })
 
     test('radio buttons', async({page}) => {
+        await page.getByText('Form Layouts').click()
+
         const usingTheGridForm = page.locator('nb-card', {hasText: "Using the Grid"})
 
         // await usingTheGridForm.getByLabel('Option 1').check({force: true})
@@ -40,6 +43,32 @@ test.describe('Form Layouts page', () => {
         await usingTheGridForm.getByRole('radio', {name: 'Option 2'}).check({force: true})
         await expect(usingTheGridForm.getByRole('radio', {name: 'Option 1'})).toBeChecked({checked: false})
         await expect(usingTheGridForm.getByRole('radio', {name: 'Option 2'})).toBeChecked({checked: true})
+    })
+
+    test('Date Picker', async({page}) => {
+        await page.getByText('Datepicker').click()
+
+        const calendarInputField = page.getByPlaceholder('Form Picker')
+        await calendarInputField.click()
+
+        let date = new Date()
+        date.setDate(date.getDate() + 45)
+        const expectedDate = date.getDate().toString()
+        const monthShort = date.toLocaleString('En-US', {month: 'short'})
+        const monthLong = date.toLocaleString('En-US', {month: 'long'})
+        const year = date.getFullYear().toString()
+
+        let calendarMonthYear = await page.locator('nb-calendar-view-mode').textContent()
+        const expectedMonthYear = ` ${monthLong} ${year} `
+
+        while (calendarMonthYear != expectedMonthYear) {
+                await page.locator(`nb-calendar-pageable-navigation [data-name="chevron-right"]`).click()
+
+                calendarMonthYear = await page.locator('nb-calendar-view-mode').textContent()
+        }
+
+        await page.locator('[class="day-cell ng-star-inserted"]').getByText(expectedDate, {exact: true}).click()
+        await expect(calendarInputField).toHaveValue(`${monthShort} ${expectedDate}, ${year}`)
     })
 })
 
@@ -108,6 +137,34 @@ test.describe('Home page', () => {
             await optionList.filter({hasText: theme}).click()
             await expect(header).toHaveCSS('background-color', `${rgb}`)
         }
+    })
+
+    test('Sliders', async ({page}) => {
+        const tempBox = page.locator(`[tabtitle="Temperature"] ngx-temperature-dragger`)
+        // Update atribute
+        const tempGauge = page.locator(`[tabtitle="Temperature"] ngx-temperature-dragger circle`)
+        await tempGauge.evaluate( node => {
+            node.setAttribute('cx', '232.630')
+            node.setAttribute('cy', '232.630')
+        })
+        await tempGauge.click()
+
+        await expect(tempBox).toContainText('30')
+
+        // Mouse movement
+        await tempBox.scrollIntoViewIfNeeded()
+
+        const box = await tempBox.boundingBox()
+        const x = box.x + box.width / 2
+        const y = box.y + box?.height / 2
+
+        await page.mouse.move(x,y)
+        await page.mouse.down()
+        await page.mouse.move(x - 100, y)
+        await page.mouse.move(x - 100, y - 100)
+        await page.mouse.up()
+
+        await expect(tempBox).toContainText('18')
     })
 })
 
